@@ -1,0 +1,8 @@
+<%INIT>
+my $tools = Menu->child('tools');
+my $timers = $tools->child(
+    timers => title => loc('Timers'),
+    description => loc('Manage timers'),
+    path => '/Tools/Timers/Display.html',
+);
+</%INIT>
