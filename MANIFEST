@@ -20,3 +20,5 @@ MANIFEST			This list of files
 META.yml
 README
 xt/lib/RT/Extension/PersistentTimers/Test.pm.in
+xt/api/add_timer.t
+xt/api/get_timers.t
