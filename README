@@ -23,6 +23,38 @@ INSTALLATION
 
     Restart your webserver
 
+METHODS
+  GetTimers
+    Get timer attribute objects for a given user id.
+
+     my ( $ret, $msg ) = RT::Extension::PersistentTimers->GetTimers( user_id => $user_id );
+
+   ARGUMENTS
+    user_id (required)
+        The user id to get timer attribute objects for.
+
+   RETURNS
+    On success, an arrayref of "RT::Attribute" objects.
+
+    On failure, a list of 2 members; "undef" and the failure message.
+
+  AddTimer
+    Add a timer attribute object for a given user id.
+
+     my ( $ret, $msg ) = RT::Extension::PersistentTimers->AddTimer( user_id => $user_id, ticket_id => $ticket_id );
+
+   ARGUMENTS
+    user_id (required)
+        The user id to add the timer attribute for.
+
+    ticket_id (required)
+        The ticket id to add the timer for.
+
+   RETURNS
+    On success, the id of the new timer attribute.
+
+    On failure, a list of 2 members; "undef" and the failure message.
+
 AUTHOR
     Blaine Motsinger <blaine@renderorange.com>
 
