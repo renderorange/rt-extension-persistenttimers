@@ -1,5 +1,5 @@
 html/Callbacks/Timers/Elements/Tabs/Privileged
-html/Tools/Timers/Display.html
+html/Tools/Timers.html
 inc/Module/Install.pm
 inc/Module/Install/Base.pm
 inc/Module/Install/Can.pm
