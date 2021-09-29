@@ -1,6 +1,8 @@
 <& /Elements/Header, Title => 'Timers' &>
 <& /Elements/Tabs &>
 
+<& /Elements/ListActions, actions => \@results &>
+
 <&| /Widgets/TitleBox, title => 'Active Timers' &>
 <div class="table-responsive">
 <table class="collection-as-table table" name="timers">
@@ -12,11 +14,80 @@
     </tr>
   </thead>
   <tbody>
+%   foreach my $timer ( @{$timers} ) {
+    <tr class="collection-as-table">
+      <td class="collection-as-table"><a href="<% $timer->{ticket}{link} %>">#<% $timer->{ticket}{id} %>: <% $timer->{ticket}{subject} %></a></th>
+      <td class="collection-as-table"><% $timer->{ticket}{owner} %></th>
+      <td class="collection-as-table"><% $timer->{seconds} %></th>
+    </tr>
+%   }
   </tbody>
 </table>
 </div>
+
+<div class="add_new_timer">
+<form method="POST" name="add_timer" enctype="multipart/form-data">
+  <div class="form-row">
+    <div class="col-auto label">Add timer for ticket:</div>
+    <div class="col-auto">
+      <input type="hidden" class="hidden" name="action" value="add" />
+      <input type="text" class="form-control" name="ticket_id" size="8" data-autocomplete="Tickets" />
+    </div>
+    <div class="col-auto">
+      <input type="submit" class="button btn btn-primary form-control" value="Add">
+    </div>
+  </div>
+</form>
+</div>
 </&>
 <%init>
+my @results;
+
+if ( $ARGS{ticket_id} && $ARGS{action} eq 'add' ) {
+    my $ticket_obj = LoadTicket( $ARGS{ticket_id} );
+
+    # TODO:
+    # these Aborts are heavy handed.  add soft failures to results, and Abort only for problems.
+    # need to research error results banner colors, rather than just yellow.
+
+    unless ( $ticket_obj->CurrentUserHasRight('ModifyTicket') ) {
+        Abort( 'Permission Denied: unable to ModifyTicket' );
+    }
+
+    my ( $ret, $msg ) = RT::Extension::PersistentTimers->AddTimer(
+        user_id => $session{'CurrentUser'}->Id,
+        ticket_id => $ARGS{ticket_id}
+    );
+    unless ( $ret ) {
+        Abort( $msg );
+    }
+
+    push @results, 'Timer for ticket ' . $ARGS{ticket_id} . ' added';
+}
+
+my ( $ret, $msg ) = RT::Extension::PersistentTimers->GetTimers( user_id => $session{'CurrentUser'}->Id );
+unless ( $ret ) {
+    Abort( "Unable to get timers: $msg" );
+}
+
+my $timers = [];
+foreach my $timer_obj ( @{$ret} ) {
+    my $content = $timer_obj->Content();
+
+    my $ticket_obj = RT::Ticket->new( $session{'CurrentUser'} );
+    my ( $ret, $msg ) = $ticket_obj->Load( $content->{ticket}{id} );
+    unless ( $ret ) {
+        Abort( $msg );
+    }
+
+    my $timer = $content;
+    $timer->{id} = $timer_obj->id;
+    $timer->{ticket}{subject} = $ticket_obj->Subject;
+    $timer->{ticket}{owner}   = $ticket_obj->OwnerObj->Name;
+    $timer->{ticket}{link}    = RT->Config->Get( 'WebPath' ) .
+                                '/Ticket/Display.html?id=' . $ticket_obj->Id;
+    push @{$timers}, $timer;
+}
 </%init>
 <%args>
 </%args>
