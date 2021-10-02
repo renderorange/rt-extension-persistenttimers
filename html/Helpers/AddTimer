@@ -1,0 +1,28 @@
+<%INIT>
+if ( $ARGS{ticket_id} ) {
+    my ( $ret, $msg ) = RT::Extension::PersistentTimers->AddTimer(
+        user_id => $session{CurrentUser}->Id,
+        ticket_id => $ARGS{ticket_id},
+    );
+    unless ( $ret ) {
+        RT->Logger->warning( $msg );
+    }
+
+    return_json( $ret, $msg );
+}
+else {
+    my $msg = 'Ticket id is required';
+    RT->Logger->warning( $msg );
+    return_json( 0, $msg );
+}
+
+sub return_json {
+    my ( $ret, $msg ) = @_;
+
+    $r->content_type( 'application/json; charset=utf-8' );
+    $m->print( JSON( [ $ret, $msg ] ) );
+    $m->abort;
+}
+</%INIT>
+<%ARGS>
+</%ARGS>

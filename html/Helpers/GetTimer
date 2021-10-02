@@ -1,0 +1,25 @@
+<%INIT>
+if ( $ARGS{timer_id} ) {
+    my ( $ret, $msg ) = RT::Extension::PersistentTimers->GetTimers( user_id => $session{'CurrentUser'}->Id );
+
+    foreach my $timer ( @{$ret} ) {
+        next unless $timer_obj->id == $ARGS{timer_id};
+        return_json( $timer );
+    }
+}
+else {
+    my $msg = 'Timer id is required';
+    RT->Logger->warning( $msg );
+    return_json( 0, $msg );
+}
+
+sub return_json {
+    my ( $ret, $msg ) = @_;
+
+    $r->content_type( 'application/json; charset=utf-8' );
+    $m->print( JSON( [ $ret, $msg ] ) );
+    $m->abort;
+}
+</%INIT>
+<%ARGS>
+</%ARGS>

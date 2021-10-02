@@ -13,10 +13,11 @@ my ( $user_one_id ) = $user_one_obj->Create(
     EmailAddress => 'one@example.com',
 );
 
+my $subject = 'ticket one';
 my $ticket_obj = RT::Ticket->new( RT->SystemUser );
 my ( $ticket_id ) = $ticket_obj->Create(
     Queue   => 'General',
-    Subject => 'ticket one',
+    Subject => $subject,
 );
 
 my $user_two_obj = RT::User->new( RT->SystemUser );
@@ -31,16 +32,20 @@ my $timers = RT::Extension::PersistentTimers->GetTimers( user_id => $user_one_id
 
 is( scalar @{$timers}, 1, 'only user one timers are returned for user one' );
 
-my $timer_content = $timers->[0]->Content;
-my $timer_content_expected =
+my $timer = $timers->[0];
+my $timer_expected =
     {
+        'id' => $timer_one_id,
         'ticket' => {
+            'owner' => 'Nobody',
             'id' => $ticket_id,
+            'link' => '/Ticket/Display.html?id=' . $ticket_id,
+            'subject' => $subject,
         },
         'seconds' => '0'
     };
 
-is_deeply( $timer_content, $timer_content_expected, 'content from GetTimers matches expected content' );
+is_deeply( $timer, $timer_expected, 'content from GetTimers matches expected content' );
 
 ARGS: {
     note( 'args' );

@@ -3,6 +3,10 @@ package RT::Extension::PersistentTimers;
 use strict;
 use warnings;
 
+require RT::User;
+require RT::Ticket;
+require RT::Attribute;
+
 our $VERSION = '0.01';
 
 =head1 NAME
@@ -47,7 +51,7 @@ Add this line:
 
 =head2 GetTimers
 
-Get timer attribute objects for a given user id.
+Get timers for a given user id.
 
  my ( $ret, $msg ) = RT::Extension::PersistentTimers->GetTimers( user_id => $user_id );
 
@@ -63,7 +67,7 @@ The user id to get timer attribute objects for.
 
 =head3 RETURNS
 
-On success, an arrayref of C<RT::Attribute> objects.
+On success, an arrayref of timer hashrefs.
 
 On failure, a list of 2 members; C<undef> and the failure message.
 
@@ -80,12 +84,29 @@ sub GetTimers {
         return ( 0, 'Argument user_id is required' );
     }
 
-    require RT::User;
     my $user_obj = RT::User->new( RT->SystemUser );
     $user_obj->Load( $arg->{user_id} );
 
-    my @timers = ( $user_obj->Attributes->Named( 'Timer' ) );
-    return \@timers;
+    my $timers = [];
+    foreach my $timer_obj ( $user_obj->Attributes->Named( 'Timer' ) ) {
+        my $content = $timer_obj->Content();
+
+        my $ticket_obj = RT::Ticket->new( $user_obj );
+        my ( $ret, $msg ) = $ticket_obj->Load( $content->{ticket}{id} );
+        unless ( $ret ) {
+            return ( $ret, $msg );
+        }
+
+        my $timer = $content;
+        $timer->{id} = $timer_obj->id;
+        $timer->{ticket}{subject} = $ticket_obj->Subject;
+        $timer->{ticket}{owner}   = $ticket_obj->OwnerObj->Name;
+        $timer->{ticket}{link}    = RT->Config->Get( 'WebPath' ) .
+                                    '/Ticket/Display.html?id=' . $ticket_obj->Id;
+        push @{$timers}, $timer;
+    }
+
+    return $timers;
 }
 
 =head2 AddTimer
@@ -130,18 +151,25 @@ sub AddTimer {
         }
     }
 
-    require RT::User;
     my $user_obj = RT::User->new( RT->SystemUser );
     $user_obj->Load( $arg->{user_id} );
 
-    foreach my $timer_obj ( @{ $self->GetTimers( user_id => $arg->{user_id} ) } ) {
-        my $content = $timer_obj->Content();
-        if ( $content->{ticket}{id} == $arg->{ticket_id} ) {
+    foreach my $timer ( @{ $self->GetTimers( user_id => $arg->{user_id} ) } ) {
+        if ( $timer->{ticket}{id} == $arg->{ticket_id} ) {
             return ( 0, 'Timer for ticket ' . $arg->{ticket_id} . ' already exists' );
         }
     }
 
-    require RT::Attribute;
+    my $ticket_obj = RT::Ticket->new( $user_obj );
+    my ( $ret, $msg ) = $ticket_obj->Load( $arg->{ticket_id} );
+    unless ( $ret ) {
+        return ( $ret, $msg );
+    }
+
+    # TODO:
+    # check if current user has ModifyTicket for this ticket
+    # Permission Denied: unable to ModifyTicket
+
     my $attr = RT::Attribute->new( $user_obj );
 
     return $attr->Create(
